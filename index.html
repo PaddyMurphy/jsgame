@@ -12,6 +12,7 @@
 
 <canvas id="myCanvas" width="480" height="320"></canvas>
 
+<!-- <script src="//cdn.jsdelivr.net/lodash/4.17.4/lodash.core.min.js"></script> -->
 <script>
 'strict mode';
 
@@ -53,21 +54,22 @@
   var lazerSpeed = 5;
   var lazerColor = 'red';
   var lazerStartY = canvas.height - paddleHeight;
+  var maxLazers = 4; // TODO: only only 3 active at a time
 
   // set up bricks
   var bricks = [];
   for(c=0; c<brickColumnCount; c++) {
       bricks[c] = [];
       for(r=0; r<brickRowCount; r++) {
-          bricks[c][r] = { x: 0, y: 0, status: 1, health: 3, color: brickColor };
+          bricks[c][r] = { x: 0, y: 0, status: 1, health: 3, color: brickColor, brickHeight: brickHeight };
       }
   }
 
   // Events
   document.addEventListener('keydown', keyDownHandler, false);
   document.addEventListener('keyup', keyUpHandler, false);
-  document.addEventListener("mousemove", mouseMoveHandler, false);
-  document.addEventListener("mousedown", fireLazer, false);
+  document.addEventListener('mousemove', mouseMoveHandler, false);
+  document.addEventListener('mousedown', fireLazer, false);
 
   function mouseMoveHandler(e) {
     var relativeX = e.clientX - canvas.offsetLeft;
@@ -124,12 +126,23 @@
               lazer.status = 0;
               // remove the brick
               b.health = --b.health;
+              b.brickHeight = b.brickHeight - 5;
               b.color = getRandomColor();
               if (b.health === 0) {
                 b.status = 0;
+                // update score
+                score++;
               }
-              // update score
-              score++;
+
+            }
+            // TODO: check lazer collision with ball
+            if (x > lazer.x &&
+                x < lazer.x+lazerWidth &&
+                y > lazer.y &&
+                y < lazer.y+lazerHeight) {
+              console.log('ball hit')
+              // change direction
+              dy = -dy;
             }
           });
           // check ball collision
@@ -141,12 +154,13 @@
             dy = -dy;
             // remove the brick
             b.health = --b.health;
+            // b.brickHeight = b.brickHeight - 5;
             b.color = getRandomColor();
             if (b.health === 0) {
               b.status = 0;
+              // update score
+              score++;
             }
-            // update score
-            score++
 
             if(score == brickRowCount * brickColumnCount) {
               console.log("YOU WIN, CONGRATULATIONS!");
@@ -189,7 +203,7 @@
   }
 
   // Lazer
-  function Lazer(lazerId, lazerSpeed){
+  function Lazer(lazerId, lazerSpeed) {
     this.lazerId = lazerId;
     this.x = paddleX + (paddleWidth / 2);
     this.y = lazerStartY;
@@ -197,9 +211,16 @@
     this.status = 1;
   }
 
-  function drawLazer(){
+  function drawLazer() {
+    var lazerCount = 0;
     lazerList.forEach(function(lazer){
       if (lazer.status === 1) {
+        // allow a max of 3 at time
+        lazerCount++;
+        if(lazerCount >= maxLazers) {
+          lazer.status = 0;
+        };
+
         lazer.y = lazer.y - lazer.lazerSpeed;
 
         ctx.beginPath();
@@ -223,7 +244,7 @@
           bricks[c][r].x = brickX;
           bricks[c][r].y = brickY;
           ctx.beginPath();
-          ctx.rect(brickX, brickY, brickWidth, brickHeight);
+          ctx.rect(brickX, brickY, brickWidth, bricks[c][r].brickHeight);
           ctx.fillStyle = bricks[c][r].color;
           ctx.fill();
           ctx.closePath();
@@ -255,9 +276,11 @@
         lives--;
         if(!lives) {
           console.log('GAME OVER');
+          // TODO: implement reload system
           document.location.reload();
         }
         else {
+          // reset the game
           x = canvas.width/2;
           y = canvas.height-30;
           dx = 2;
